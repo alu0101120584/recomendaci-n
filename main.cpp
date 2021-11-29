@@ -13,15 +13,14 @@ vector<string> dividir_espacios(string text);
 double pearson(int pos, int pos2, vector<vector<double>> usuarios, vector<double> medias);
 double coseno(int pos, int pos2, vector<vector<double>> usuarios, vector<double> medias);
 double euclidea(int pos, int pos2, vector<vector<double>> usuarios, vector<double> medias);
-double prediccion_simple(string metrica, vector<vector<double>> usuarios, vector<double> medias, vector<int> filas_vacias);
+double prediccion_simple(string metrica, vector<vector<double>> usuarios, vector<double> medias, vector<int> filas_vacias, int vecinos);
 vector<int> filas_vacias(vector<vector<string>> solucion);
 
 int main (int argc, char *argv[]) {
     string filename(argv[1]);
     string metrica = argv[2];
-    string vecinos = argv[2];
-    string prediccion = argv[3];
-
+    string vecinos = argv[3];
+    string prediccion = argv[4];
     vector<string> lines;
     vector<vector<string>> solucion;
     string line;
@@ -67,11 +66,13 @@ int main (int argc, char *argv[]) {
     }
     
     // Calculo de la correlacion de Pearson, distancia coseno y distancia euclidea
-    pearson(0,1,usuarios,medias);
-    coseno(0,1,usuarios,medias);
-    euclidea(0,1,usuarios,medias);
+    //pearson(0,1,usuarios,medias);
+    //coseno(0,1,usuarios,medias);
+    //euclidea(0,1,usuarios,medias);
 
     // Calculo de predicciones
+    
+    prediccion_simple(metrica, usuarios, medias, filas_vacias(solucion),atoi(vecinos.c_str()));
 
     input_file.close();
     return EXIT_SUCCESS;
@@ -104,7 +105,6 @@ double pearson(int pos, int pos2, vector<vector<double>> usuarios, vector<double
     }
 
     double corr = (double)(usuarios[pos].size() * sum_XY - sum_X * sum_Y) / sqrt((usuarios[pos].size() * squareSum_X - sum_X * sum_X) * (usuarios[pos].size() * squareSum_Y - sum_Y * sum_Y));
-    cout << corr << endl;
     return corr;
 }
 
@@ -117,7 +117,6 @@ double coseno(int pos, int pos2, vector<vector<double>> usuarios, vector<double>
     }
  
     double cos = (double)(sum_XY) / (sqrt(squareSum_X) * sqrt(squareSum_Y));
-    cout << cos << endl;
     return cos;
 }
 
@@ -129,7 +128,6 @@ double euclidea(int pos, int pos2, vector<vector<double>> usuarios, vector<doubl
     }
 
     double euc = sqrt((sum_X-sum_Y)*(sum_X-sum_Y));
-    cout << euc << endl;
     return euc;
 }
 
@@ -146,15 +144,57 @@ vector<int> filas_vacias(vector<vector<string>> solucion) {
     return fila_vacia;
 }
 
-double prediccion_simple(string metrica, vector<vector<double>> usuarios, vector<double> medias, vector<int> filas_vacias) {
+double prediccion_simple(string metrica, vector<vector<double>> usuarios, vector<double> medias, vector<int> filas_vacias, int vecinos) {
     if (metrica == "euc") {
-        for (size_t i = 0; i < count; i++) {
-            /* code */
+        vector<double> resultados_euclidea;
+        for (size_t i = 0; i < filas_vacias.size(); i++) {
+            for (size_t j = 0; j < usuarios.size(); j++)
+            {
+                resultados_euclidea.push_back(euclidea(i,j,usuarios,medias));
+            }
         }
+        sort(resultados_euclidea.begin(), resultados_euclidea.end());
+
         
     } else if (metrica == "pears") {
+        vector<pair<double, double>> clave;
+        vector<double> resultados_pearson;
+        for (size_t i = 0; i < filas_vacias.size(); i++) {
+            for (size_t j = 0; j < usuarios.size(); j++)
+            {
+                double aux =pearson(i,j,usuarios,medias);
+                resultados_pearson.push_back(aux);
+            }
+        }
+        for (size_t i = 0; i < resultados_pearson.size(); i++) {
+            pair<double, double> aux;
+            aux.first = i;
+            aux.second = resultados_pearson[i];
+            clave.push_back(aux);
+        }
 
+        sort(clave.begin(), clave.end());
+        for (size_t i = 0; i < clave.size(); i++)
+        {
+            cout << clave[i].first << endl;
+        }
+        cout << vecinos << endl;
+        double a=0,b=0;
+        for (size_t i = 0; i < vecinos; i++) {
+            double aux2 = clave[i].first;
+            a = a + clave[i].second * usuarios[clave[i].first][i];
+            b = b + abs(clave[i].second);
+            cout << aux2 << endl;
+        }
+        double c = a/b;
     } else if (metrica == "cos") {
-
+        vector<double> resultados_coseno;
+        for (size_t i = 0; i < filas_vacias.size(); i++) {
+            for (size_t j = 0; j < usuarios.size(); j++)
+            {
+                resultados_coseno.push_back(coseno(i,j,usuarios,medias));
+            }
+        }
+        sort(resultados_coseno.begin(), resultados_coseno.end());
     }
 }
