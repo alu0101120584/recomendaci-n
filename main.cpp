@@ -14,13 +14,15 @@ double pearson(int pos, int pos2, vector<vector<double>> usuarios, vector<double
 double coseno(int pos, int pos2, vector<vector<double>> usuarios, vector<double> medias);
 double euclidea(int pos, int pos2, vector<vector<double>> usuarios, vector<double> medias);
 double prediccion_simple(string metrica, vector<vector<double>> usuarios, vector<double> medias, vector<int> filas_vacias, int vecinos);
+double prediccion_doble(string metrica, vector<vector<double>> usuarios, vector<double> medias, vector<int> filas_vacias, int vecinos);
 vector<int> filas_vacias(vector<vector<string>> solucion);
 
 int main (int argc, char *argv[]) {
     string filename(argv[1]);
-    string metrica = argv[2];
-    string vecinos = argv[3];
-    string prediccion = argv[4];
+    string filename2(argv[2]);
+    string metrica = argv[3];
+    string vecinos = argv[4];
+    string prediccion = argv[5];
     vector<string> lines;
     vector<vector<string>> solucion;
     string line;
@@ -65,14 +67,39 @@ int main (int argc, char *argv[]) {
         medias.push_back(aux/cont);
     }
     
-    // Calculo de la correlacion de Pearson, distancia coseno y distancia euclidea
-    //pearson(0,1,usuarios,medias);
-    //coseno(0,1,usuarios,medias);
-    //euclidea(0,1,usuarios,medias);
-
+    double valor = 0;
     // Calculo de predicciones
+    if (prediccion == "simple") {
+        valor = prediccion_simple(metrica, usuarios, medias, filas_vacias(solucion),atoi(vecinos.c_str()));
+    } else if (prediccion == "doble") {
+        valor = prediccion_doble(metrica, usuarios, medias, filas_vacias(solucion),atoi(vecinos.c_str()));
+    }
     
-    prediccion_simple(metrica, usuarios, medias, filas_vacias(solucion),atoi(vecinos.c_str()));
+
+    // Sustituimos el - por el valor calculado    
+    for (size_t i = 0; i < solucion.size(); i++) {
+        vector<double> usuario;
+        for (size_t j = 0; j < solucion[i].size(); j++) {
+            if (solucion[i][j] == "-") {
+                solucion[i][j] = to_string(valor);
+            }
+        }
+    }
+
+    fstream file_out;
+
+    file_out.open(filename2, std::ios_base::out);
+    if (!file_out.is_open()) {
+        cout << "failed to open " << filename2 << '\n';
+    } else {
+        for (size_t i = 0; i < solucion.size(); i++) {
+            for (size_t j = 0; j < solucion[i].size(); j++) {
+                file_out << solucion[i][j] << " ";
+            }
+            file_out << endl;
+        }   
+        cout << "Done Writing!" << endl;
+    }
 
     input_file.close();
     return EXIT_SUCCESS;
@@ -146,6 +173,7 @@ vector<int> filas_vacias(vector<vector<string>> solucion) {
 
 double prediccion_simple(string metrica, vector<vector<double>> usuarios, vector<double> medias, vector<int> filas_vacias, int vecinos) {
     if (metrica == "euc") {
+        vector<pair<double, double>> clave;
         vector<double> resultados_euclidea;
         for (size_t i = 0; i < filas_vacias.size(); i++) {
             for (size_t j = 0; j < usuarios.size(); j++)
@@ -153,17 +181,29 @@ double prediccion_simple(string metrica, vector<vector<double>> usuarios, vector
                 resultados_euclidea.push_back(euclidea(i,j,usuarios,medias));
             }
         }
-        sort(resultados_euclidea.begin(), resultados_euclidea.end());
+        for (size_t i = 0; i < resultados_euclidea.size(); i++) {
+            pair<double, double> aux;
+            aux.first = i;
+            aux.second = resultados_euclidea[i];
+            clave.push_back(aux);
+        }
+        sort(clave.begin(), clave.end());
 
+        double a=0,b=0;
+        for (size_t i = 0; i < vecinos; i++) {
+            a = a + clave[i].second * usuarios[clave[i].first][i];
+            b = b + abs(clave[i].second);
+        }
         
+        double c = a/b;
+        cout << c << endl;
+        return c;
     } else if (metrica == "pears") {
         vector<pair<double, double>> clave;
         vector<double> resultados_pearson;
         for (size_t i = 0; i < filas_vacias.size(); i++) {
-            for (size_t j = 0; j < usuarios.size(); j++)
-            {
-                double aux =pearson(i,j,usuarios,medias);
-                resultados_pearson.push_back(aux);
+            for (size_t j = 0; j < usuarios.size(); j++) {
+                resultados_pearson.push_back(pearson(i,j,usuarios,medias));
             }
         }
         for (size_t i = 0; i < resultados_pearson.size(); i++) {
@@ -174,20 +214,18 @@ double prediccion_simple(string metrica, vector<vector<double>> usuarios, vector
         }
 
         sort(clave.begin(), clave.end());
-        for (size_t i = 0; i < clave.size(); i++)
-        {
-            cout << clave[i].first << endl;
-        }
-        cout << vecinos << endl;
+
         double a=0,b=0;
         for (size_t i = 0; i < vecinos; i++) {
-            double aux2 = clave[i].first;
             a = a + clave[i].second * usuarios[clave[i].first][i];
             b = b + abs(clave[i].second);
-            cout << aux2 << endl;
         }
         double c = a/b;
+        cout << c << endl;
+        return c;
+
     } else if (metrica == "cos") {
+        vector<pair<double, double>> clave;
         vector<double> resultados_coseno;
         for (size_t i = 0; i < filas_vacias.size(); i++) {
             for (size_t j = 0; j < usuarios.size(); j++)
@@ -195,6 +233,110 @@ double prediccion_simple(string metrica, vector<vector<double>> usuarios, vector
                 resultados_coseno.push_back(coseno(i,j,usuarios,medias));
             }
         }
-        sort(resultados_coseno.begin(), resultados_coseno.end());
+        for (size_t i = 0; i < resultados_coseno.size(); i++) {
+            pair<double, double> aux;
+            aux.first = i;
+            aux.second = resultados_coseno[i];
+            clave.push_back(aux);
+        }
+        sort(clave.begin(), clave.end());
+
+        double a=0,b=0;
+        for (size_t i = 0; i < vecinos; i++) {
+            a = a + clave[i].second * usuarios[clave[i].first][i];
+            b = b + abs(clave[i].second);
+        }
+        double c = a/b;
+        cout << c << endl;
+        return c;
+    } else {
+        exit;
+        return -1;
+    }
+}
+
+double prediccion_doble(string metrica, vector<vector<double>> usuarios, vector<double> medias, vector<int> filas_vacias, int vecinos) {
+    if (metrica == "euc") {
+        vector<pair<double, double>> clave;
+        vector<double> resultados_euclidea;
+        for (size_t i = 0; i < filas_vacias.size(); i++) {
+            for (size_t j = 0; j < usuarios.size(); j++)
+            {
+                resultados_euclidea.push_back(euclidea(i,j,usuarios,medias));
+            }
+        }
+        for (size_t i = 0; i < resultados_euclidea.size(); i++) {
+            pair<double, double> aux;
+            aux.first = i;
+            aux.second = resultados_euclidea[i];
+            clave.push_back(aux);
+        }
+        sort(clave.begin(), clave.end());
+
+        double a=0,b=0;
+        for (size_t i = 0; i < vecinos; i++) {
+            a = a + clave[i].second * (usuarios[clave[i].first][i]-medias[clave[i].first]);
+            b = b + abs(clave[i].second);
+        }
+        
+        double c = medias[clave[0].first] + a/b;
+        cout << c << endl;
+        return c;
+    } else if (metrica == "pears") {
+        vector<pair<double, double>> clave;
+        vector<double> resultados_pearson;
+        for (size_t i = 0; i < filas_vacias.size(); i++) {
+            for (size_t j = 0; j < usuarios.size(); j++) {
+                resultados_pearson.push_back(pearson(i,j,usuarios,medias));
+            }
+        }
+        for (size_t i = 0; i < resultados_pearson.size(); i++) {
+            pair<double, double> aux;
+            aux.first = i;
+            aux.second = resultados_pearson[i];
+            clave.push_back(aux);
+        }
+
+        sort(clave.begin(), clave.end());
+
+        double a=0,b=0;
+        for (size_t i = 0; i < vecinos; i++) {
+            a = a + clave[i].second * (usuarios[clave[i].first][i]-medias[clave[i].first]);
+            b = b + abs(clave[i].second);
+        }
+        
+        double c = medias[clave[0].first] + a/b;
+        cout << c << endl;
+        return c;
+
+    } else if (metrica == "cos") {
+        vector<pair<double, double>> clave;
+        vector<double> resultados_coseno;
+        for (size_t i = 0; i < filas_vacias.size(); i++) {
+            for (size_t j = 0; j < usuarios.size(); j++)
+            {
+                resultados_coseno.push_back(coseno(i,j,usuarios,medias));
+            }
+        }
+        for (size_t i = 0; i < resultados_coseno.size(); i++) {
+            pair<double, double> aux;
+            aux.first = i;
+            aux.second = resultados_coseno[i];
+            clave.push_back(aux);
+        }
+        sort(clave.begin(), clave.end());
+
+        double a=0,b=0;
+        for (size_t i = 0; i < vecinos; i++) {
+            a = a + clave[i].second * (usuarios[clave[i].first][i]-medias[clave[i].first]);
+            b = b + abs(clave[i].second);
+        }
+        
+        double c = medias[clave[0].first] + a/b;
+        cout << c << endl;
+        return c;
+    } else {
+        exit;
+        return -1;
     }
 }
